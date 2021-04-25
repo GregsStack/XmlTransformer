@@ -1,0 +1,30 @@
+﻿# Based on https://thorsten-hans.com/how-to-build-smaller-and-secure-docker-images-for-net5
+# and https://thorsten-hans.com/scan-docker-images-for-vulnerabilities-with-docker-cli-and-snyk
+
+FROM mcr.microsoft.com/dotnet/sdk:5.0-alpine AS publish
+WORKDIR /
+COPY ["src/XmlTransformer/XmlTransformer.csproj", "src/XmlTransformer/"]
+RUN dotnet restore "src/XmlTransformer/XmlTransformer.csproj" --runtime alpine-x64
+COPY . .
+WORKDIR "/src/XmlTransformer"
+RUN dotnet publish "XmlTransformer.csproj" -c Release -o /app/publish \
+    --no-restore \
+    --runtime alpine-x64 \
+    --self-contained true \
+    /p:PublishTrimmed=true \
+    /p:PublishSingleFile=true
+
+FROM mcr.microsoft.com/dotnet/runtime-deps:5.0-alpine AS final
+LABEL version="0.1" maintainer="Gregor Sindl <gregor4005@gmail.com>"
+
+RUN adduser --disabled-password \
+  --home /app \
+  --gecos '' dotnetuser && chown -R dotnetuser /app
+
+# upgrade musl to remove potential vulnerability
+RUN apk upgrade --no-cache musl
+
+USER dotnetuser
+WORKDIR /app
+COPY --from=publish /app/publish .
+ENTRYPOINT ["./XmlTransformer"]

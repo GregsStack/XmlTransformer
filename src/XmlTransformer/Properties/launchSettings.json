@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "XmlTransformer": {
+      "commandName": "Project"
+    },
+    "Docker": {
+      "commandName": "Docker"
+    }
+  }
+}
